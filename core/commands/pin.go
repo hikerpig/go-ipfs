@@ -554,7 +554,13 @@ func pinLsAll(ctx context.Context, typeStr string, n *core.IpfsNode) (map[cid.Ci
 	if typeStr == "indirect" || typeStr == "all" {
 		set := cid.NewSet()
 		for _, k := range n.Pinning.RecursiveKeys() {
-			err := dag.EnumerateChildren(ctx, dag.GetLinksWithDAG(n.DAG), k, set.Visit)
+			err := dag.WalkDepth(
+				ctx, dag.GetLinksWithDAG(n.DAG), k, 0,
+				func(c cid.Cid, depth int) bool {
+					// don't visit the root node, that doesn't count.
+					return depth == 0 || set.Visit(c)
+				},
+			)
 			if err != nil {
 				return nil, err
 			}
